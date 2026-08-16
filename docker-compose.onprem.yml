@@ -50,7 +50,16 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "8080:8080"
-    depends_on: [postgres, model-api]
+    depends_on:
+      postgres: {condition: service_healthy}
+      model-api: {condition: service_healthy}
+    healthcheck:
+      # Spring actuator 가 없을 수 있어 포트 개방만 확인한다(가장 약한 가정).
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
     networks: [scanops-onprem]
     restart: unless-stopped
 
@@ -73,11 +82,26 @@ services:
       SCANOPS_HYBRID_POLICY: ${SCANOPS_HYBRID_POLICY:-JOERN-NO-BETTER}
       SCANOPS_HYBRID_DELTA: ${SCANOPS_HYBRID_DELTA:-}
       SCANOPS_HYBRID_TAU: ${SCANOPS_HYBRID_TAU:-}
+      SCANOPS_JOERN_TIMEOUT: ${SCANOPS_JOERN_TIMEOUT:-120}
+    ports:
+      - "8100:8100"
+    depends_on:
+      joern-worker: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/health',timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
     networks: [scanops-onprem]
     restart: unless-stopped
 
   # ── Joern CPG 워커 (HTTP 모드) ────────────────────────────────────────────
   joern-worker:
+    # 빌드 대신 push 된 이미지를 쓴다(에어갭 환경에선 사전에 docker pull/load).
+    # 이 이미지에는 JS 프론트엔드용 astgen 이 이미 포함돼 있다
+    # (/opt/joern/joern-cli/frontends/jssrc2cpg/bin/astgen/astgen-linux — 2026-08-17 확인).
+    image: ${JOERN_IMAGE:-hansekim31/scanops-joern-worker:final}
     build:
       context: ../scanops-model
       dockerfile: joern/Dockerfile
@@ -96,6 +120,12 @@ services:
     mem_limit: ${JOERN_MEM_LIMIT:-8g}
     tmpfs:
       - /tmp:size=4g
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8200/health',timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     networks: [scanops-onprem]
     restart: unless-stopped
 
@@ -109,6 +139,12 @@ services:
       --host 0.0.0.0 --port 8080
     volumes:
       - ${GGUF_DIR:-./models}:/models:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
     networks: [scanops-onprem]
     restart: unless-stopped
 
@@ -157,6 +193,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scanops}
     volumes:
       - postgres-onprem-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scanops} -d ${POSTGRES_DB:-scanops}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     networks: [scanops-onprem]
     restart: unless-stopped
 
