@@ -66,6 +66,29 @@ services:
       # 부가 기능 — 탐지 시 한국어 메타 생성(on/off), RAG 참고 CVE(Qdrant Cloud URL 등)
       SCANOPS_META: ${SCANOPS_META:-on}
       QDRANT_URL: ${QDRANT_URL:-}
+      # ── 레포단위 그래프+taint (Java + JS/TS) ──
+      # 둘 다 비어있으면 graph_spec_prod.analyze_repo()가 즉시 []를 반환 — v1 LLM 단독으로
+      # 안전하게 폴백한다(§CLAUDE.md 규칙: 배치 전체를 막지 않는다). 문제 생기면
+      # GRAPH_SPEC_ENABLED=off 로 즉시 끌 수 있다(재빌드 불필요, 컨테이너 재시작만).
+      GRAPH_SPEC_ENABLED: ${GRAPH_SPEC_ENABLED:-on}
+      # Joern은 RunPod 서버리스가 원인불명으로 job을 안 가져가서(§24-6) 상시기동 Pod +
+      # 온프레미스 HTTP(/joern/repo)로 우회 중. JOERN_HTTP_URL이 있으면 이걸 우선 쓴다
+      # (RUNPOD_JOERN_ENDPOINT_ID는 서버리스가 나중에 고쳐지면 쓸 자리로 남겨둔다).
+      JOERN_HTTP_URL: ${JOERN_HTTP_URL:-}
+      RUNPOD_JOERN_ENDPOINT_ID: ${RUNPOD_JOERN_ENDPOINT_ID:-}
+      # CPG의 룰 생성/critic은 Qwen3.8-Max(DashScope)만 사용한다.
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
+      GRAPH_SPEC_LLM_MODEL: ${GRAPH_SPEC_LLM_MODEL:-qwen3.8-max}
+      GRAPH_SPEC_LLM_MAX_WORKERS: ${GRAPH_SPEC_LLM_MAX_WORKERS:-6}
+      # 파일럿 4회 연속 순손실이므로 기본 off. 연구 비교가 필요할 때만 on.
+      GRAPH_SPEC_CRITIC_ENABLED: ${GRAPH_SPEC_CRITIC_ENABLED:-off}
+      GRAPH_SPEC_API_CACHE: /data/graph_spec_api_cache.json
+      # 판정 결합은 G4 held-out을 통과하기 전까지 advisory-only가 안전하다. TRUST-JOERN은
+      # CPG 경고를 LLM과 OR로 합쳐 precision을 떨어뜨릴 수 있으므로 명시적으로만 켠다.
+      SCANOPS_HYBRID_POLICY: ${SCANOPS_HYBRID_POLICY:-JOERN-NO-BETTER}
+    volumes:
+      - graph-spec-cache:/data
     networks: [scanops-net]
     restart: unless-stopped
 
@@ -96,3 +119,4 @@ networks:
 
 volumes:
   postgres-data:
+  graph-spec-cache:
