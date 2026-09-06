@@ -77,16 +77,27 @@ services:
       LLAMA_SERVER_URL: http://llama-server:8080
       SCANOPS_META: ${SCANOPS_META:-on}
       QDRANT_URL: ${QDRANT_URL:-}
-      # Joern 워커 (HTTP 모드) 주소 — 하이브리드 집계용
+      # Joern 워커 주소. 단일-file 레거시 경로와 Java 레포 CPG가 같은 워커를 쓴다.
       SCANOPS_JOERN_URL: http://joern-worker:8200
       SCANOPS_HYBRID_POLICY: ${SCANOPS_HYBRID_POLICY:-JOERN-NO-BETTER}
+      SCANOPS_JAVA_ENGINE: ${SCANOPS_JAVA_ENGINE:-cpg-qwen38}
       SCANOPS_HYBRID_DELTA: ${SCANOPS_HYBRID_DELTA:-}
       SCANOPS_HYBRID_TAU: ${SCANOPS_HYBRID_TAU:-}
       SCANOPS_JOERN_TIMEOUT: ${SCANOPS_JOERN_TIMEOUT:-120}
+      GRAPH_SPEC_ENABLED: ${GRAPH_SPEC_ENABLED:-on}
+      JOERN_HTTP_URL: http://joern-worker:8200
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
+      GRAPH_SPEC_LLM_MODEL: ${GRAPH_SPEC_LLM_MODEL:-qwen3.8-max}
+      GRAPH_SPEC_LLM_MAX_WORKERS: ${GRAPH_SPEC_LLM_MAX_WORKERS:-6}
+      GRAPH_SPEC_CRITIC_ENABLED: ${GRAPH_SPEC_CRITIC_ENABLED:-off}
+      GRAPH_SPEC_API_CACHE: /data/graph_spec_api_cache.json
     ports:
       - "8100:8100"
     depends_on:
       joern-worker: {condition: service_healthy}
+    volumes:
+      - graph-spec-onprem-cache:/data
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/health',timeout=3).status==200 else 1)\""]
       interval: 10s
@@ -217,3 +228,4 @@ networks:
 volumes:
   postgres-onprem-data:
   qdrant-data:
+  graph-spec-onprem-cache:

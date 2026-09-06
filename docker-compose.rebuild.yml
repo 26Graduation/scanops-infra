@@ -84,9 +84,10 @@ services:
       # 파일럿 4회 연속 순손실이므로 기본 off. 연구 비교가 필요할 때만 on.
       GRAPH_SPEC_CRITIC_ENABLED: ${GRAPH_SPEC_CRITIC_ENABLED:-off}
       GRAPH_SPEC_API_CACHE: /data/graph_spec_api_cache.json
-      # 판정 결합은 G4 held-out을 통과하기 전까지 advisory-only가 안전하다. TRUST-JOERN은
-      # CPG 경고를 LLM과 OR로 합쳐 precision을 떨어뜨릴 수 있으므로 명시적으로만 켠다.
+      # 비-Java 레거시 결합은 advisory-only. Java는 SCANOPS_JAVA_ENGINE에 의해 별도로
+      # CPG+Qwen3.8-Max를 1차 판정으로 사용하며 CVEfixes QLoRA로 폴백하지 않는다.
       SCANOPS_HYBRID_POLICY: ${SCANOPS_HYBRID_POLICY:-JOERN-NO-BETTER}
+      SCANOPS_JAVA_ENGINE: ${SCANOPS_JAVA_ENGINE:-cpg-qwen38}
     volumes:
       - graph-spec-cache:/data
     networks: [scanops-net]
