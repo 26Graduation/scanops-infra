@@ -81,6 +81,9 @@ services:
       DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}
       GRAPH_SPEC_LLM_MODEL: ${GRAPH_SPEC_LLM_MODEL:-qwen3.8-max}
       GRAPH_SPEC_LLM_MAX_WORKERS: ${GRAPH_SPEC_LLM_MAX_WORKERS:-6}
+      GRAPH_SPEC_RULEGEN_BATCH: ${GRAPH_SPEC_RULEGEN_BATCH:-20}
+      GRAPH_SPEC_RULEGEN_TIMEOUT: ${GRAPH_SPEC_RULEGEN_TIMEOUT:-600}
+      GRAPH_SPEC_DYNAMIC_RULE_MODE: ${GRAPH_SPEC_DYNAMIC_RULE_MODE:-shadow}
       # 파일럿 4회 연속 순손실이므로 기본 off. 연구 비교가 필요할 때만 on.
       GRAPH_SPEC_CRITIC_ENABLED: ${GRAPH_SPEC_CRITIC_ENABLED:-off}
       GRAPH_SPEC_API_CACHE: /data/graph_spec_api_cache.json
